@@ -1,0 +1,37 @@
+# Run 2 - CURIOSITY (baseline + intrinsic curiosity reward)
+# mlagents-learn dodger_curiosity.yaml --run-id="curiosity"
+behaviors:
+  Dodger:                       # must match "Behavior Name" in Behavior Parameters
+    trainer_type: ppo
+    time_horizon: 128           # Typical range: 32 - 2048. Steps collected before bootstrapping the value estimate.
+    max_steps: 2e6              # Typical range: 5e5 - 1e7. Total environment steps (all arenas together).
+    keep_checkpoints: 5
+    checkpoint_interval: 500000
+    summary_freq: 20000         # How often stats are written to TensorBoard.
+    threaded: true
+    hyperparameters:
+      learning_rate: 3e-4       # Typical range: 1e-5 - 1e-3. Gradient descent step size.
+      learning_rate_schedule: linear  # LR decays to 0 over max_steps -> stable end of training.
+      batch_size: 1024          # Typical range (continuous PPO): 512 - 5120. Experiences per gradient step.
+      buffer_size: 10240        # Typical range (PPO): 2048 - 409600. Must be a multiple of batch_size.
+      beta: 5.0e-3              # Typical range: 1e-4 - 1e-2. Entropy bonus -> more exploration.
+      epsilon: 0.2              # Typical range: 0.1 - 0.3. PPO clip range: how far the new policy may move.
+      lambd: 0.95               # Typical range: 0.9 - 0.95. GAE lambda (bias vs variance of advantage).
+      num_epoch: 3              # Typical range: 3 - 10. Passes through the buffer per update.
+    network_settings:
+      normalize: false          # Observations are already scaled to about [-1, 1].
+      hidden_units: 128         # Typical range: 32 - 512
+      num_layers: 2             # Typical range: 1 - 3
+    reward_signals:
+      extrinsic:
+        gamma: 0.99             # Typical range: 0.8 - 0.995. Long horizon: dodging pays off later.
+        strength: 1.0
+      curiosity:                # Extra reward for reaching states the agent cannot predict yet
+        gamma: 0.99             # -> helps exploration when the agent gets stuck.
+        strength: 0.02          # Keep small (0.001 - 0.1) so it does not drown the real reward.
+        network_settings:
+          hidden_units: 256
+        learning_rate: 3.0e-4
+
+torch_settings:
+  device: cpu
