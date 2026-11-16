@@ -1,0 +1,65 @@
+{
+    "Dodger": {
+        "checkpoints": [
+            {
+                "steps": 499953,
+                "file_path": "results\\curiosity\\Dodger\\Dodger-499953.onnx",
+                "reward": 2.1283052742688193,
+                "creation_time": 1794864172.6021469,
+                "auxillary_file_paths": [
+                    "results\\curiosity\\Dodger\\Dodger-499953.pt"
+                ]
+            },
+            {
+                "steps": 999997,
+                "file_path": "results\\curiosity\\Dodger\\Dodger-999997.onnx",
+                "reward": 2.8920001089572906,
+                "creation_time": 1794865194.9950006,
+                "auxillary_file_paths": [
+                    "results\\curiosity\\Dodger\\Dodger-999997.pt"
+                ]
+            },
+            {
+                "steps": 1499897,
+                "file_path": "results\\curiosity\\Dodger\\Dodger-1499897.onnx",
+                "reward": 4.9887494745353855,
+                "creation_time": 1794866162.9792717,
+                "auxillary_file_paths": [
+                    "results\\curiosity\\Dodger\\Dodger-1499897.pt"
+                ]
+            },
+            {
+                "steps": 1999872,
+                "file_path": "results\\curiosity\\Dodger\\Dodger-1999872.onnx",
+                "reward": 5.548642391072852,
+                "creation_time": 1794867177.8596814,
+                "auxillary_file_paths": [
+                    "results\\curiosity\\Dodger\\Dodger-1999872.pt"
+                ]
+            },
+            {
+                "steps": 2000024,
+                "file_path": "results\\curiosity\\Dodger\\Dodger-2000024.onnx",
+                "reward": 4.932687083724886,
+                "creation_time": 1794867177.9635909,
+                "auxillary_file_paths": [
+                    "results\\curiosity\\Dodger\\Dodger-2000024.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 2000024,
+            "file_path": "results\\curiosity\\Dodger.onnx",
+            "reward": 4.932687083724886,
+            "creation_time": 1794867177.9635909,
+            "auxillary_file_paths": [
+                "results\\curiosity\\Dodger\\Dodger-2000024.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.2+cpu"
+    }
+}

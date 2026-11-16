@@ -41,3 +41,4 @@ Assets/ML-Agents.meta
 # ML-Agents: keep final models + TensorBoard logs, skip big intermediate checkpoints
 Assets/Training/results/**/checkpoint.pt
 Assets/Training/results/**/*-*.pt
+Assets/Training/results/**/*.pt.meta
