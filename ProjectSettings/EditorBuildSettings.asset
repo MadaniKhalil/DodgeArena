@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/DodgeArena.unity
-    guid: 25e49b1aebc457b498f7e6ed49fafdc0
+    path: Assets/Scenes/MyArena.unity
+    guid: 40d1c535dd546614fb87b0b6ee8d2a8f
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}

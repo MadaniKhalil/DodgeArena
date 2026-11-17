@@ -34,23 +34,22 @@ Open the project: Unity Hub → **Add → Add project from disk** → select the
 
 ```
 Assets/
-  Scripts/    DodgeAgent.cs, BallSpawner.cs, Ball.cs, Tags.cs   <- game + RL code
-  Training/   dodger_baseline.yaml, dodger_curiosity.yaml
-  Scenes/     DodgeArena.unity    <- finished reference scene (menu: Dodge Arena > Build Scene)
-  Editor/     DodgeSceneBuilder.cs <- the script that generates the reference scene
+  Scripts/    DodgeAgent.cs, BallSpawner.cs, Ball.cs, Tags.cs, ScoreDisplay.cs   <- game + RL code
+  Training/   dodger_baseline.yaml, dodger_curiosity.yaml, results/ (trained models + logs)
+  Scenes/     MyArena.unity          <- the scene (9 training arenas)
+  Prefabs/    MyTrainingArea.prefab  <- one arena: floor, walls, obstacles, target, agent
 ```
 
 ---
 
-## 1. Build the arena yourself (your Unity part)
+## 1. How the arena is built
 
-Build your own scene by hand so you know every component. If stuck, open `Scenes/DodgeArena.unity` and compare.
+The scene was built by hand in the Unity editor. To rebuild it from scratch:
 
 **File → New Scene → Basic (Built-in)**, save as `Assets/Scenes/MyArena.unity`.
 
-1. **Tags** – Edit → Project Settings → Tags and Layers: add `Agent`, `Target`, `Ball`, `Wall`
-   (already there if the reference scene was built).
-2. **Materials** – `Assets/Materials` already has Floor, Wall, Agent, Target, Ball. Drag them onto objects.
+1. **Tags** – Edit → Project Settings → Tags and Layers: add `Agent`, `Target`, `Ball`, `Wall`.
+2. **Materials** – `Assets/Materials` has Floor, Wall, Agent, Target, Ball. Drag them onto objects.
 3. **Arena** – Create Empty `TrainingArea` at (0,0,0). As its children:
    - `Floor`: Cube, position (0,-0.25,0), scale (20,0.5,20).
    - 4 walls, tag **Wall**:
@@ -76,6 +75,8 @@ Build your own scene by hand so you know every component. If stuck, open `Scenes
    Set it back to **Default** afterwards.
 7. **More arenas = faster training** – drag `TrainingArea` into `Assets/Prefabs` (prefab), duplicate it
    ~8 times, 30 units apart. Main Camera at (0,21,-15), rotation (55,0,0).
+8. **Score text** (optional, visual only) – Create Empty `ScoreDisplay` → Add Component **Score Display**,
+   drag one arena's `Agent` into it.
 
 ---
 

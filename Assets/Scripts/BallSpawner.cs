@@ -3,33 +3,34 @@ using UnityEngine;
 namespace DodgeArena
 {
     /// <summary>
-    /// Fires balls from a random edge of the arena towards (roughly) the agent.
-    /// Speed and fire rate come from the agent, which reads them from the
-    /// curriculum (environment_parameters in the YAML file).
+    /// Fires a ball from a random edge of the arena towards the agent every few seconds.
+    /// The agent tells the spawner how fast and how often to fire (see DodgeAgent).
     /// </summary>
     public class BallSpawner : MonoBehaviour
     {
-        private const float SpawnEdge = 9.2f;
-        private const float SpawnSpread = 8.5f;
+        private const float SpawnEdge = 9.2f;      // distance from the arena centre to where balls appear
+        private const float SpawnSpread = 8.5f;    // how far along that edge a ball can appear
         private const float BallHeight = 0.5f;
         private const float BallDiameter = 0.7f;
+        private const float TrailSeconds = 0.35f;  // how long the trail behind a ball is
 
-        [Tooltip("Material used for the spawned balls.")]
+        [Tooltip("Material used for the balls.")]
         public Material ballMaterial;
 
-        [Tooltip("Random offset (metres) added to the aim point, so not every ball is a direct hit.")]
+        [Tooltip("Random offset (metres) added to the aim, so not every ball is a direct hit.")]
         public float aimNoise = 2f;
 
-        private Transform agentTransform;
-        private float ballSpeed = 6f;
-        private float spawnInterval = 1f;
+        private Transform agent;
+        private float ballSpeed;
+        private float spawnInterval;
         private float timer;
+        private Material trailMaterial;
 
-        public void Configure(Transform agent, float speed, float interval)
+        public void Configure(Transform agentTransform, float speed, float interval)
         {
-            agentTransform = agent;
+            agent = agentTransform;
             ballSpeed = speed;
-            spawnInterval = Mathf.Max(0.1f, interval);
+            spawnInterval = interval;
         }
 
         public void ResetBalls()
@@ -38,13 +39,14 @@ namespace DodgeArena
             {
                 Destroy(ball.gameObject);
             }
-            // Short grace period at the start of each episode.
+
+            // Start below zero so the agent gets one extra second before the first ball.
             timer = -1f;
         }
 
         private void FixedUpdate()
         {
-            if (agentTransform == null)
+            if (agent == null)
             {
                 return;
             }
@@ -59,44 +61,60 @@ namespace DodgeArena
 
         private void SpawnBall()
         {
-            Vector3 localStart = RandomEdgePoint();
-            Vector3 worldStart = transform.TransformPoint(localStart);
+            Vector3 start = transform.TransformPoint(RandomEdgePoint());
 
-            Vector3 aim = agentTransform.position + new Vector3(
-                Random.Range(-aimNoise, aimNoise), 0f, Random.Range(-aimNoise, aimNoise));
-            Vector3 direction = aim - worldStart;
+            // Aim at the agent, plus a little randomness.
+            Vector3 aim = agent.position + new Vector3(Random.Range(-aimNoise, aimNoise), 0f, Random.Range(-aimNoise, aimNoise));
+            Vector3 direction = aim - start;
             direction.y = 0f;
             direction.Normalize();
 
-            GameObject ballObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            ballObject.name = "Ball";
-            ballObject.tag = Tags.Ball;
-            ballObject.transform.SetParent(transform, false);
-            ballObject.transform.position = worldStart;
-            ballObject.transform.localScale = Vector3.one * BallDiameter;
-            ballObject.GetComponent<Collider>().isTrigger = true;
-            if (ballMaterial != null)
-            {
-                ballObject.GetComponent<Renderer>().sharedMaterial = ballMaterial;
-            }
+            GameObject ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            ball.name = "Ball";
+            ball.tag = Tags.Ball;
+            ball.transform.SetParent(transform, false);
+            ball.transform.position = start;
+            ball.transform.localScale = Vector3.one * BallDiameter;
+            ball.GetComponent<Collider>().isTrigger = true;
+            ball.GetComponent<Renderer>().sharedMaterial = ballMaterial;
 
-            Rigidbody body = ballObject.AddComponent<Rigidbody>();
+            Rigidbody body = ball.AddComponent<Rigidbody>();
             body.isKinematic = true;
             body.useGravity = false;
 
-            ballObject.AddComponent<Ball>().Launch(direction * ballSpeed, transform);
+            AddTrail(ball);
+            ball.AddComponent<Ball>().Launch(direction * ballSpeed, transform);
         }
 
+        /// <summary>Visual only: a short fading line behind the ball. The agent cannot see it.</summary>
+        private void AddTrail(GameObject ball)
+        {
+            if (trailMaterial == null)
+            {
+                trailMaterial = new Material(Shader.Find("Sprites/Default"));
+            }
+
+            Color color = ballMaterial.color;
+            TrailRenderer trail = ball.AddComponent<TrailRenderer>();
+            trail.sharedMaterial = trailMaterial;
+            trail.time = TrailSeconds;
+            trail.startWidth = BallDiameter;
+            trail.endWidth = 0f;
+            trail.startColor = new Color(color.r, color.g, color.b, 0.6f);
+            trail.endColor = new Color(color.r, color.g, color.b, 0f);
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        /// <summary>A random point on one of the four edges of the arena.</summary>
         private static Vector3 RandomEdgePoint()
         {
             float along = Random.Range(-SpawnSpread, SpawnSpread);
-            switch (Random.Range(0, 4))
-            {
-                case 0: return new Vector3(along, BallHeight, SpawnEdge);
-                case 1: return new Vector3(along, BallHeight, -SpawnEdge);
-                case 2: return new Vector3(SpawnEdge, BallHeight, along);
-                default: return new Vector3(-SpawnEdge, BallHeight, along);
-            }
+            int edge = Random.Range(0, 4);
+
+            if (edge == 0) return new Vector3(along, BallHeight, SpawnEdge);   // north
+            if (edge == 1) return new Vector3(along, BallHeight, -SpawnEdge);  // south
+            if (edge == 2) return new Vector3(SpawnEdge, BallHeight, along);   // east
+            return new Vector3(-SpawnEdge, BallHeight, along);                 // west
         }
     }
 }

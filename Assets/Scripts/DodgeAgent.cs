@@ -23,13 +23,16 @@ namespace DodgeArena
     [RequireComponent(typeof(Rigidbody))]
     public class DodgeAgent : Agent
     {
-        private const float ArenaDiagonal = 28.3f;
+        // Rewards
         private const float TargetReward = 1f;
         private const float HitPenalty = -1f;
         private const float WallPenalty = -0.005f;
-        private const float SpawnRange = 8f;
-        private const float ObstacleRange = 6f;
-        private const float MinObstacleDistance = 2.5f;
+
+        // Arena layout
+        private const float ArenaDiagonal = 28.3f;       // longest distance in the arena, used to scale distances to 0..1
+        private const float SpawnRange = 8f;             // agent and target spawn inside -8..8
+        private const float ObstacleRange = 6f;          // obstacles spawn inside -6..6
+        private const float MinObstacleDistance = 2.5f;  // keep spawns this far away from obstacles
         private const int MaxPlacementTries = 50;
 
         [Header("Scene references")]
@@ -46,6 +49,12 @@ namespace DodgeArena
         [Tooltip("Seconds between two balls.")]
         public float spawnInterval = 1.5f;
 
+        /// <summary>Targets collected in the current episode (shown by ScoreDisplay).</summary>
+        public int TargetsThisEpisode { get; private set; }
+
+        /// <summary>Most targets collected in any finished episode so far.</summary>
+        public int BestTargets { get; private set; }
+
         private Rigidbody body;
 
         public override void Initialize()
@@ -55,13 +64,16 @@ namespace DodgeArena
 
         public override void OnEpisodeBegin()
         {
+            BestTargets = Mathf.Max(BestTargets, TargetsThisEpisode);
+            TargetsThisEpisode = 0;
+
             PlaceObstacles();
 
             body.linearVelocity = Vector3.zero;
             body.angularVelocity = Vector3.zero;
             transform.localPosition = FindFreeSpot(0.5f);
             transform.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            Physics.SyncTransforms();
+            Physics.SyncTransforms(); // let the physics engine know we moved things
 
             MoveTarget();
             spawner.Configure(transform, ballSpeed, spawnInterval);
@@ -70,10 +82,13 @@ namespace DodgeArena
 
         public override void CollectObservations(VectorSensor sensor)
         {
+            // 1-2: own speed (sideways, forward), seen from the agent, scaled to about -1..1
             Vector3 localVelocity = transform.InverseTransformDirection(body.linearVelocity);
             sensor.AddObservation(localVelocity.x / moveSpeed);
             sensor.AddObservation(localVelocity.z / moveSpeed);
 
+            // 3-4: direction to the target, seen from the agent (x = left/right, z = in front/behind)
+            // 5:   distance to the target, scaled to 0..1
             Vector3 toTarget = target.position - transform.position;
             toTarget.y = 0f;
             Vector3 localDirection = transform.InverseTransformDirection(toTarget.normalized);
@@ -96,7 +111,8 @@ namespace DodgeArena
             velocity.y = body.linearVelocity.y;
             body.linearVelocity = velocity;
 
-            AddReward(-1f / Mathf.Max(1, MaxStep));
+            // Small penalty every step, so the agent learns to hurry.
+            AddReward(-1f / MaxStep);
         }
 
         public override void Heuristic(in ActionBuffers actionsOut)
@@ -112,6 +128,7 @@ namespace DodgeArena
             if (other.CompareTag(Tags.Target))
             {
                 AddReward(TargetReward);
+                TargetsThisEpisode++;
                 MoveTarget();
             }
             else if (other.CompareTag(Tags.Ball))
