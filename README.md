@@ -12,6 +12,28 @@ Grade-5 checklist (solo) and where each item is:
 | Multiple hyperparameters | both YAML files set ~15 hyperparameters; 2 runs compared (baseline vs. curiosity) |
 | TensorBoard | `tensorboard --logdir results` |
 
+## Results
+
+Both runs were trained with PPO for 2 million steps on 9 arenas at the same time (about 70 minutes each, CPU only).
+
+![TensorBoard: cumulative reward of both runs](Docs/tensorboard.png)
+
+| Run | Config | Mean reward at start | Mean reward at 2M steps (smoothed) |
+|---|---|---|---|
+| baseline | `dodger_baseline.yaml` | about −1.2 | **7.0** |
+| curiosity | `dodger_curiosity.yaml` (baseline + curiosity reward) | about −1.2 | 6.1 |
+
+Both runs learn at the same speed until about 600k steps; after that the baseline pulls ahead.
+
+A reward of +7 means the agent collects about 8 targets per episode before a ball hits it.
+
+**Why curiosity did not help here:** curiosity gives an extra reward for situations the agent cannot predict
+yet, which helps when the real reward is rare (sparse). In this game the reward is frequent (dense):
+targets respawn after every pickup, and a hit is punished right away. The extra curiosity reward mostly
+distracted the agent from the targets, so the baseline learned slightly better.
+
+The final model used in the demo video is `Assets/Training/results/baseline/Dodger.onnx`.
+
 ---
 
 ## 0. Setup (versions differ from the PDF guide)
