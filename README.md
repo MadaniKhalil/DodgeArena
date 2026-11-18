@@ -1,5 +1,7 @@
 # Dodge Arena
 
+![Dodge Arena demo](Docs/demo.gif)
+
 A reinforcement learning agent that learns to **collect targets while dodging incoming projectiles** in a 3D arena.
 Built with **Unity** and **Unity ML-Agents**, and trained with **PPO** (Proximal Policy Optimization).
 
