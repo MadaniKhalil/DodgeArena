@@ -42,3 +42,8 @@ Assets/ML-Agents.meta
 Assets/Training/results/**/checkpoint.pt
 Assets/Training/results/**/*-*.pt
 Assets/Training/results/**/*.pt.meta
+# keep only the final model of each run, not the in-between exports and timing logs
+Assets/Training/results/*/Dodger/Dodger-*.onnx
+Assets/Training/results/*/Dodger/Dodger-*.onnx.meta
+Assets/Training/results/*/run_logs/
+Assets/Training/results/*/run_logs.meta

@@ -1,156 +1,100 @@
-# Dodge Arena – Unity ML-Agents project (solo)
+# Dodge Arena
 
-A blue agent in a walled 3D arena must **collect yellow targets** while **dodging red balls** fired at it
-from the edges, and move around **grey obstacles** (balls break on obstacles, so they work as cover).
+A reinforcement learning agent that learns to **collect targets while dodging incoming projectiles** in a 3D arena.
+Built with **Unity** and **Unity ML-Agents**, and trained with **PPO** (Proximal Policy Optimization).
 
-Grade-5 checklist (solo) and where each item is:
+The agent starts out knowing nothing. After 2 million training steps it collects about 8 targets per episode
+while moving out of the way of balls flying at it.
 
-| Requirement | Where |
+## The task
+
+- A walled 20 × 20 arena with 3 obstacles that move to random positions every episode.
+- One target at a time. Touching it gives a reward and a new target appears somewhere else.
+- Balls are fired at the agent from random edges of the arena every 1.5 seconds. A hit ends the episode.
+- Obstacles block balls, so standing behind them is a valid strategy the agent can discover on its own.
+
+## How the agent works
+
+**Observations**
+- A 3D ray sensor (17 rays spread all around the agent) that detects targets, balls and walls.
+  The last 3 frames are stacked, so the agent can tell which way a ball is moving.
+- 5 numbers: its own velocity (2), the direction to the target (2) and the distance to the target (1).
+
+**Actions** (continuous)
+- Move forward / backward
+- Turn left / right
+
+**Rewards**
+
+| Event | Reward |
 |---|---|
-| 3D environment with simple obstacles | arena, walls, 3 randomly placed obstacles |
-| YAML config file | `Assets/Training/dodger_baseline.yaml` |
-| Multiple hyperparameters | both YAML files set ~15 hyperparameters; 2 runs compared (baseline vs. curiosity) |
-| TensorBoard | `tensorboard --logdir results` |
+| Collect a target | +1 |
+| Hit by a ball | −1 (episode ends) |
+| Touching a wall or obstacle | −0.005 per step |
+| Every step | −1 / 2000 (encourages speed) |
+
+## Training
+
+- Algorithm: PPO (actor–critic), via `mlagents-learn`
+- 9 copies of the arena train in parallel to collect experience faster
+- 2 million steps per run, about 70 minutes on a laptop CPU
+- Network: 2 hidden layers × 128 units
+- Main hyperparameters: learning rate 3e-4 (linear decay), batch 1024, buffer 10240, 3 epochs,
+  entropy β 5e-3, clip ε 0.2, GAE λ 0.95, discount γ 0.99
+
+All settings are in [`dodger_baseline.yaml`](Assets/Training/dodger_baseline.yaml) with a short comment on each.
 
 ## Results
 
-Both runs were trained with PPO for 2 million steps on 9 arenas at the same time (about 70 minutes each, CPU only).
+Two runs were compared: a **baseline** and a run with an extra **curiosity** reward
+([`dodger_curiosity.yaml`](Assets/Training/dodger_curiosity.yaml)).
 
-![TensorBoard: cumulative reward of both runs](Docs/tensorboard.png)
+![Cumulative reward of both runs in TensorBoard](Docs/tensorboard.png)
 
-| Run | Config | Mean reward at start | Mean reward at 2M steps (smoothed) |
-|---|---|---|---|
-| baseline | `dodger_baseline.yaml` | about −1.2 | **7.0** |
-| curiosity | `dodger_curiosity.yaml` (baseline + curiosity reward) | about −1.2 | 6.1 |
+| Run | Mean reward at start | Mean reward after 2M steps |
+|---|---|---|
+| Baseline | −1.2 | **7.0** |
+| Curiosity | −1.2 | 6.1 |
 
-Both runs learn at the same speed until about 600k steps; after that the baseline pulls ahead.
+Both runs learn at the same pace until about 600k steps; after that the baseline pulls ahead.
 
-A reward of +7 means the agent collects about 8 targets per episode before a ball hits it.
+**Why curiosity did not help:** curiosity rewards the agent for situations it cannot predict yet,
+which helps when real rewards are rare. Here rewards are frequent: a new target appears after every pickup
+and hits are punished immediately. The extra signal mostly distracted the agent from the targets.
 
-**Why curiosity did not help here:** curiosity gives an extra reward for situations the agent cannot predict
-yet, which helps when the real reward is rare (sparse). In this game the reward is frequent (dense):
-targets respawn after every pickup, and a hit is punished right away. The extra curiosity reward mostly
-distracted the agent from the targets, so the baseline learned slightly better.
-
-The final model used in the demo video is `Assets/Training/results/baseline/Dodger.onnx`.
-
----
-
-## 0. Setup (versions differ from the PDF guide)
-
-The PDF says Unity *2020.3 or later*. This PC has Unity **6000.6**, which needs the newer toolkit:
-Unity package `com.unity.ml-agents` **4.2.0** (already installed), Python **3.10.11** and `mlagents` **1.1.0**
-(already installed in `..\.venv`). The YAML format and the commands are the same as in the course.
-
-Use this instead of `conda activate unity`:
-
-```bat
-cd "D:\UNI\UNI_Practical\Reinforcement Learning"
-.venv\Scripts\activate
-```
-
-(To recreate the environment on another PC: Python 3.10, then
-`pip install mlagents==1.1.0 torch==2.1.2 "setuptools<70"`.)
-
-Open the project: Unity Hub → **Add → Add project from disk** → select the `DodgeArena` folder.
+## Project structure
 
 ```
 Assets/
-  Scripts/    DodgeAgent.cs, BallSpawner.cs, Ball.cs, Tags.cs, ScoreDisplay.cs   <- game + RL code
-  Training/   dodger_baseline.yaml, dodger_curiosity.yaml, results/ (trained models + logs)
-  Scenes/     MyArena.unity          <- the scene (9 training arenas)
-  Prefabs/    MyTrainingArea.prefab  <- one arena: floor, walls, obstacles, target, agent
+  Scripts/
+    DodgeAgent.cs      the agent: observations, actions, rewards, episode reset
+    BallSpawner.cs     fires balls at the agent
+    Ball.cs            moves a ball and removes it when it leaves the arena or hits a wall
+    ScoreDisplay.cs    on-screen score (visual only)
+    Tags.cs            tag names shared by the scripts
+  Training/
+    dodger_baseline.yaml, dodger_curiosity.yaml   training configs
+    results/           trained models (.onnx) and TensorBoard logs
+  Scenes/MyArena.unity           scene with 9 arenas
+  Prefabs/MyTrainingArea.prefab  one arena
 ```
+
+## Running it
+
+**Requirements:** Unity 6 (6000.x), Unity ML-Agents package 4.2.0, Python 3.10 with `mlagents` 1.1.0.
+
+**Watch the trained agent**
+1. Open the project in Unity and load `Assets/Scenes/MyArena.unity`.
+2. The agents already use the trained model `results/baseline/Dodger.onnx`. Press Play.
+
+**Train it yourself**
+```bash
+pip install mlagents==1.1.0 torch==2.1.2 "setuptools<70"
+cd Assets/Training
+mlagents-learn dodger_baseline.yaml --run-id=my_run
+```
+Press Play in Unity when asked. Watch progress with `tensorboard --logdir results`.
 
 ---
 
-## 1. How the arena is built
-
-The scene was built by hand in the Unity editor. To rebuild it from scratch:
-
-**File → New Scene → Basic (Built-in)**, save as `Assets/Scenes/MyArena.unity`.
-
-1. **Tags** – Edit → Project Settings → Tags and Layers: add `Agent`, `Target`, `Ball`, `Wall`.
-2. **Materials** – `Assets/Materials` has Floor, Wall, Agent, Target, Ball. Drag them onto objects.
-3. **Arena** – Create Empty `TrainingArea` at (0,0,0). As its children:
-   - `Floor`: Cube, position (0,-0.25,0), scale (20,0.5,20).
-   - 4 walls, tag **Wall**:
-
-     | Name | Position | Scale |
-     |---|---|---|
-     | Wall N | (0, 0.5, 10.25) | (21, 1, 0.5) |
-     | Wall S | (0, 0.5, -10.25) | (21, 1, 0.5) |
-     | Wall E | (10.25, 0.5, 0) | (0.5, 1, 20) |
-     | Wall W | (-10.25, 0.5, 0) | (0.5, 1, 20) |
-   - 3 obstacles `Obstacle 0/1/2`: Cubes, tag **Wall**, scale (3,1.5,1). The script moves them each episode.
-   - `Target`: Sphere, tag **Target**, scale 0.8, Sphere Collider **Is Trigger** ticked.
-4. **Ball spawner** – on `TrainingArea`: Add Component → **Ball Spawner**, Ball Material = `Ball`.
-5. **Agent** – Cube `Agent`, tag **Agent**, child of `TrainingArea`, position (0,0.5,-4).
-   - **Rigidbody**: Use Gravity off; Constraints: freeze Position **Y**, Rotation **X** and **Z**.
-   - **Dodge Agent** (script): Max Step `2000`; drag in Target, the 3 Obstacles, Spawner (`TrainingArea`).
-   - **Behavior Parameters** (added automatically): Behavior Name `Dodger`, Vector Observation Space Size `5`,
-     Continuous Actions `2`.
-   - **Ray Perception Sensor 3D**: Detectable Tags `Target`, `Ball`, `Wall`; Rays Per Direction `8`;
-     Max Ray Degrees `180`; Sphere Cast Radius `0.35`; Ray Length `22`; Stacked Raycasts `3`.
-   - **Decision Requester**: Decision Period `5`.
-6. **Test by hand** – Behavior Type = **Heuristic Only**, press Play: W/S move, A/D turn.
-   Set it back to **Default** afterwards.
-7. **More arenas = faster training** – drag `TrainingArea` into `Assets/Prefabs` (prefab), duplicate it
-   ~8 times, 30 units apart. Main Camera at (0,21,-15), rotation (55,0,0).
-8. **Score text** (optional, visual only) – Create Empty `ScoreDisplay` → Add Component **Score Display**,
-   drag one arena's `Agent` into it.
-
----
-
-## 2. Train (2 runs) and compare in TensorBoard
-
-Two terminals, both with the venv active:
-
-```bat
-cd "D:\UNI\UNI_Practical\Reinforcement Learning"
-.venv\Scripts\activate
-cd DodgeArena\Assets\Training
-```
-
-Terminal 1:
-```bat
-mlagents-learn dodger_baseline.yaml --run-id="baseline"
-```
-Press **Play** in Unity when asked. Stop with Ctrl+C any time (model is saved), continue with `--resume`.
-Then a second run:
-```bat
-mlagents-learn dodger_curiosity.yaml --run-id="curiosity"
-```
-
-Terminal 2:
-```bat
-tensorboard --logdir results
-```
-Open http://localhost:6006 and compare `Environment/Cumulative Reward`, `Environment/Episode Length`,
-`Policy/Entropy`, `Losses/*` between the two runs. Want a third run? Copy a YAML, change e.g.
-`learning_rate` or `hidden_units`, use a new `--run-id`.
-
----
-
-## 3. Show the trained agent + video
-
-1. Model: `Assets/Training/results/<run-id>/Dodger.onnx`.
-2. Agent → Behavior Parameters → **Model** = that `.onnx`, Behavior Type = **Inference Only**. Press Play.
-3. Record the screen (Win+Alt+R) and email the video as the submission says.
-
----
-
-## 4. How it works (for the theory questions)
-
-**Rewards** (`DodgeAgent.cs`): +1 target (new one spawns), −1 hit by ball (episode ends),
-−0.005 per step touching a wall, −1/MaxStep every step (hurry up).
-
-**Observations**: 5 numbers (own velocity x/z, direction to target x/z, distance to target), plus the ray
-sensor: 17 rays seeing Target/Ball/Wall, 3 frames stacked so it can tell where balls are *moving*.
-
-**Actions**: 2 continuous: move forward/back, turn left/right.
-
-**Hyperparameters** (see comments in the YAML): `learning_rate`, `batch_size`, `buffer_size`, `num_epoch`,
-`beta` (entropy → exploration), `epsilon` (PPO clip), `lambd` (GAE), `gamma` (discount),
-`time_horizon`, `hidden_units`/`num_layers`. **Curiosity** adds an intrinsic reward for states the agent
-can't predict yet, to help exploration.
+Made as a course project for Practical Reinforcement Learning at the University of Debrecen.
